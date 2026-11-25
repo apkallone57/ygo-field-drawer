@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>游戏王 · 随机抽字段</title>
+<style>
+  :root {
+    --bg: #0d0a1a;
+    --panel: #1a1430;
+    --panel-2: #241b45;
+    --gold: #e8c35a;
+    --gold-2: #f5d97e;
+    --text: #efe9dc;
+    --dim: #9b92b5;
+    --accent: #8a6ff0;
+    --danger: #e06c75;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    min-height: 100vh;
+    background:
+      radial-gradient(1200px 600px at 80% -10%, rgba(138,111,240,.25), transparent 60%),
+      radial-gradient(900px 500px at 10% 110%, rgba(232,195,90,.12), transparent 60%),
+      var(--bg);
+    color: var(--text);
+    font-family: "PingFang SC", "Microsoft YaHei", "Segoe UI", sans-serif;
+    padding: 24px 16px 48px;
+  }
+  .wrap { max-width: 720px; margin: 0 auto; }
+
+  header { text-align: center; margin-bottom: 28px; }
+  h1 {
+    font-size: 30px; letter-spacing: 4px;
+    background: linear-gradient(180deg, var(--gold-2), var(--gold) 55%, #b98f2e);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    text-shadow: 0 0 30px rgba(232,195,90,.25);
+    font-family: "Source Han Serif SC", "Noto Serif SC", "STZhongsong", serif;
+  }
+  header p { color: var(--dim); margin-top: 8px; font-size: 14px; letter-spacing: 1px; }
+
+  .panel {
+    background: linear-gradient(180deg, var(--panel), var(--panel-2));
+    border: 1px solid rgba(232,195,90,.25);
+    border-radius: 14px;
+    padding: 18px;
+    box-shadow: 0 10px 40px rgba(0,0,0,.45);
+  }
+  .row { display: flex; gap: 10px; align-items: center; margin: 10px 0; flex-wrap: wrap; }
+  .row label { min-width: 88px; color: var(--dim); font-size: 14px; }
+  input[type="text"], input[type="number"], select {
+    background: #0f0b20; color: var(--text);
+    border: 1px solid #3a2f66; border-radius: 8px;
+    padding: 8px 10px; font-size: 15px; outline: none;
+  }
+  input:focus, select:focus { border-color: var(--accent); }
+  input[type="number"] { width: 84px; }
+  .hint { color: #6f668f; font-size: 12px; line-height: 1.7; margin-top: 6px; }
+  .btn {
+    cursor: pointer; border: none; border-radius: 9px;
+    font-size: 15px; padding: 9px 16px; color: #241b45;
+    background: linear-gradient(180deg, var(--gold-2), var(--gold));
+    font-weight: bold; letter-spacing: 1px;
+    transition: transform .12s ease, box-shadow .12s ease;
+  }
+  .btn:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(232,195,90,.35); }
+  .btn:active { transform: translateY(0); }
+  .btn.ghost {
+    background: transparent; color: var(--gold);
+    border: 1px solid rgba(232,195,90,.5); font-weight: normal;
+  }
+  .btn.small { padding: 7px 12px; font-size: 13px; }
+  .btn:disabled { opacity: .35; cursor: not-allowed; transform: none; box-shadow: none; }
+
+  .draw-area { text-align: center; margin: 26px 0 10px; }
+  #btn-draw {
+    font-size: 22px; padding: 14px 64px; border-radius: 999px;
+    letter-spacing: 10px; text-indent: 10px;
+    background: linear-gradient(180deg, #ffe9a3, var(--gold) 45%, #b98f2e);
+    box-shadow: 0 8px 30px rgba(232,195,90,.4), inset 0 1px 0 rgba(255,255,255,.6);
+  }
+
+  #result { margin-top: 24px; display: none; }
+  .cards { display: flex; flex-wrap: wrap; gap: 14px; justify-content: center; }
+  .card {
+    width: 148px; min-height: 170px;
+    background: linear-gradient(160deg, #2c2158, #17102e 60%);
+    border: 1px solid rgba(232,195,90,.45);
+    border-radius: 12px;
+    padding: 14px 10px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    position: relative; overflow: hidden;
+    animation: pop .5s cubic-bezier(.2,1.4,.4,1) backwards;
+    box-shadow: 0 8px 24px rgba(0,0,0,.5);
+  }
+  .card::before {
+    content: "✦"; position: absolute; top: 8px; left: 12px;
+    color: rgba(232,195,90,.5); font-size: 12px;
+  }
+  .card .num {
+    position: absolute; top: 10px; right: 10px;
+    font-size: 12px; color: var(--gold); opacity: .9;
+  }
+  .card .name {
+    font-size: 21px; font-weight: bold; color: var(--gold-2);
+    text-align: center; line-height: 1.35; margin-bottom: 10px;
+    font-family: "Source Han Serif SC", "Noto Serif SC", "STZhongsong", serif;
+    word-break: keep-all;
+  }
+  .card .count {
+    font-size: 12px; color: var(--dim);
+    border: 1px solid #3a2f66; border-radius: 999px; padding: 3px 10px;
+  }
+  .card .kill {
+    position: absolute; bottom: 8px; right: 10px;
+    background: none; border: none; cursor: pointer;
+    color: #8a7fae; font-size: 14px; opacity: 0; transition: opacity .15s;
+  }
+  .card:hover .kill { opacity: 1; }
+  .card .kill:hover { color: var(--danger); }
+  #block-panel { margin-top: 12px; border-top: 1px dashed #3a2f66; padding-top: 12px; }
+  #block-list { margin: 8px 0 4px; }
+  #block-list .empty { color: #6f668f; font-size: 12px; }
+  .block-chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: #0f0b20; border: 1px solid #3a2f66; border-radius: 999px;
+    padding: 4px 10px; font-size: 13px; margin: 3px 4px 3px 0;
+  }
+  .block-chip button {
+    background: none; border: none; cursor: pointer;
+    color: var(--danger); font-size: 13px; padding: 0; line-height: 1;
+  }
+  @keyframes pop {
+    0% { transform: rotateY(90deg) scale(.7); opacity: 0; }
+    100% { transform: none; opacity: 1; }
+  }
+  .result-bar {
+    text-align: center; margin: 22px 0 6px;
+    display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;
+  }
+  #redraw-info { text-align: center; color: var(--dim); font-size: 13px; margin-bottom: 8px; }
+
+  footer {
+    margin-top: 40px; text-align: center;
+    color: #5d5480; font-size: 12px; line-height: 1.8;
+  }
+  .toast {
+    position: fixed; left: 50%; bottom: 32px; transform: translateX(-50%) translateY(20px);
+    background: #241b45; color: var(--text);
+    border: 1px solid rgba(232,195,90,.4); border-radius: 999px;
+    padding: 10px 22px; font-size: 14px; opacity: 0; pointer-events: none;
+    transition: all .25s ease; z-index: 99;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  @media (max-width: 480px) {
+    h1 { font-size: 24px; }
+    .card { width: 40vw; min-height: 0; padding: 16px 6px; }
+    .card .name { font-size: 18px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>游戏王 · 随机抽字段</h1>
+    <p>和朋友各抽几个字段，围绕它们组一副卡组吧</p>
+  </header>
+
+  <div class="panel">
+    <div class="row">
+      <label for="room">房间号</label>
+      <input type="text" id="room" maxlength="16" placeholder="留空=各自独立随机" autocomplete="off">
+      <button class="btn ghost small" id="btn-room">🎲 生成</button>
+      <button class="btn ghost small" id="btn-room-copy">复制</button>
+    </div>
+    <div class="row">
+      <label for="count">抽取数量</label>
+      <input type="number" id="count" min="1" max="8" value="3">
+    </div>
+    <div class="row">
+      <label for="min">字段卡数下限</label>
+      <select id="min">
+        <option value="0">不限</option>
+        <option value="5">≥ 5 张</option>
+        <option value="10" selected>≥ 10 张</option>
+        <option value="20">≥ 20 张</option>
+        <option value="30">≥ 30 张</option>
+      </select>
+    </div>
+    <div class="row">
+      <label for="redraw">重抽次数上限</label>
+      <select id="redraw">
+        <option value="0">不限</option>
+        <option value="1">1 次</option>
+        <option value="2">2 次</option>
+        <option value="3" selected>3 次</option>
+        <option value="5">5 次</option>
+      </select>
+    </div>
+    <div class="hint">
+      房间号留空时各自独立随机；填写后，<b>相同房间号 + 相同重抽进度 + 相同设置</b>的人会抽到完全一样的结果。
+      房间号与设置发群里，大家就能抽同一批字段。
+    </div>
+    <div class="row" style="margin-top:14px">
+      <label>屏蔽字段</label>
+      <button class="btn ghost small" id="btn-block">🚫 屏蔽列表（0）</button>
+      <span class="hint" style="margin:0">屏蔽太强力的字段后不再抽出</span>
+    </div>
+    <div id="block-panel" style="display:none">
+      <div class="row" style="margin-top:2px">
+        <input type="text" id="block-add" placeholder="输入字段名（可一次粘贴多个，用、逗号或换行分隔）" style="flex:1;min-width:160px" autocomplete="off">
+        <button class="btn ghost small" id="btn-block-copy">复制</button>
+        <button class="btn ghost small" id="btn-block-paste">粘贴导入</button>
+        <button class="btn ghost small" id="btn-block-clear">清空</button>
+      </div>
+      <div id="block-list"></div>
+      <div class="hint">
+        屏蔽列表只保存在本机浏览器；抽到的字段卡上悬停可点 ✕ 快捷屏蔽。
+        屏蔽会改变随机池——用房间号同步时，双方屏蔽表需一致（点「复制」发给他「粘贴导入」即可）。
+      </div>
+    </div>
+  </div>
+
+  <div class="draw-area">
+    <button class="btn" id="btn-draw">抽！</button>
+  </div>
+
+  <div id="result">
+    <div class="cards" id="cards"></div>
+    <div id="redraw-info"></div>
+    <div class="result-bar">
+      <button class="btn ghost" id="btn-redraw">🔄 重抽</button>
+      <button class="btn ghost" id="btn-copy">📋 复制战报</button>
+    </div>
+  </div>
+
+  <footer>
+    数据来源：百鸽 ygocdb.com 全量卡表 + YGOPro 字段表（共 586 个字段，2026-11）<br>
+    单文件本地运行，无需联网 · 卡数含该字段的怪兽/魔法/陷阱
+  </footer>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const FIELDS = [{"name":"No.","n":165},{"name":"英雄","n":163},{"name":"融合","n":110},{"name":"电子","n":102},{"name":"恶魔","n":101},{"name":"娱乐伙伴","n":101},{"name":"元素英雄","n":82},{"name":"魔导","n":78},{"name":"机人","n":77},{"name":"战士","n":76},{"name":"同调","n":76},{"name":"混沌","n":73},{"name":"DD","n":69},{"name":"超量","n":66},{"name":"黑羽","n":63},{"name":"银河","n":57},{"name":"剑斗","n":53},{"name":"转生炎兽","n":51},{"name":"剑士","n":48},{"name":"灵摆","n":48},{"name":"哥布林","n":47},{"name":"剑斗兽","n":47},{"name":"超重武者","n":47},{"name":"忍者","n":46},{"name":"光子","n":46},{"name":"次世代","n":46},{"name":"急袭猛禽","n":46},{"name":"冰结界","n":44},{"name":"魔术师","n":43},{"name":"守护者","n":43},{"name":"深渊","n":43},{"name":"龙骑兵团","n":43},{"name":"自然","n":42},{"name":"异虫","n":41},{"name":"古代的机械","n":41},{"name":"亚马逊","n":40},{"name":"宝石","n":40},{"name":"鬼计","n":40},{"name":"疾行机人","n":40},{"name":"人偶","n":39},{"name":"宝玉","n":38},{"name":"武神","n":38},{"name":"异色眼","n":38},{"name":"DDD","n":38},{"name":"捕食","n":38},{"name":"鲨","n":37},{"name":"LV","n":36},{"name":"魔轰神","n":36},{"name":"新宇","n":35},{"name":"入魔","n":35},{"name":"星圣","n":35},{"name":"幻影","n":35},{"name":"星遗物","n":35},{"name":"闪刀","n":35},{"name":"吸血鬼","n":34},{"name":"变形斗士","n":34},{"name":"海晶少女","n":34},{"name":"真红眼","n":33},{"name":"命运英雄","n":33},{"name":"宝石骑士","n":33},{"name":"电气","n":32},{"name":"卡通","n":32},{"name":"遗式","n":32},{"name":"暗黑界","n":32},{"name":"废品","n":32},{"name":"我我我","n":32},{"name":"混沌No.","n":32},{"name":"影依","n":32},{"name":"六武众","n":31},{"name":"废铁","n":31},{"name":"光道","n":31},{"name":"永火","n":31},{"name":"淘气仙星","n":31},{"name":"鹰身","n":30},{"name":"幻兽","n":30},{"name":"堕天使","n":30},{"name":"同调士","n":30},{"name":"霍普","n":30},{"name":"刚鬼","n":30},{"name":"魔女术","n":30},{"name":"地缚","n":29},{"name":"核成","n":29},{"name":"科技属","n":29},{"name":"先史遗产","n":29},{"name":"魔偶甜点","n":29},{"name":"栗子球","n":28},{"name":"炎星","n":28},{"name":"星骑士","n":28},{"name":"捕食植物","n":28},{"name":"机巧","n":27},{"name":"薰风","n":27},{"name":"圣骑士","n":27},{"name":"异热同心","n":27},{"name":"幻影骑士团","n":27},{"name":"守墓","n":26},{"name":"大日","n":26},{"name":"极星","n":26},{"name":"机关傀儡","n":26},{"name":"教导","n":26},{"name":"X-剑士","n":25},{"name":"英豪","n":25},{"name":"灵兽","n":25},{"name":"方界","n":25},{"name":"烙印","n":25},{"name":"影灵衣","n":24},{"name":"幻变骚灵","n":24},{"name":"青眼","n":23},{"name":"凭依","n":23},{"name":"朱罗纪","n":23},{"name":"熔岩","n":23},{"name":"升阶魔法","n":23},{"name":"魔玩具","n":23},{"name":"月光","n":23},{"name":"@火灵天星","n":23},{"name":"武装龙","n":22},{"name":"星尘","n":22},{"name":"幻奏","n":22},{"name":"复仇死者","n":22},{"name":"空牙团","n":22},{"name":"大贤者","n":22},{"name":"机甲","n":21},{"name":"正义盟军","n":21},{"name":"发条","n":21},{"name":"水精鳞","n":21},{"name":"森罗","n":21},{"name":"不知火","n":21},{"name":"水晶机巧","n":21},{"name":"方程式运动员","n":21},{"name":"枪管","n":21},{"name":"破械","n":21},{"name":"六花","n":21},{"name":"帝王","n":20},{"name":"魔人","n":20},{"name":"蔷薇","n":20},{"name":"银河眼","n":20},{"name":"甲虫装机","n":20},{"name":"圣刻","n":20},{"name":"燃烧拳击手","n":20},{"name":"彼岸","n":20},{"name":"星际仙踪","n":20},{"name":"炼装","n":20},{"name":"魔妖","n":20},{"name":"战华","n":20},{"name":"童话动物","n":20},{"name":"铁兽","n":20},{"name":"龙辉巧","n":20},{"name":"治安战警队","n":20},{"name":"狱神","n":20},{"name":"企鹅","n":19},{"name":"落穴","n":19},{"name":"外星","n":19},{"name":"邪心英雄","n":19},{"name":"炎狱","n":19},{"name":"爬虫妖","n":19},{"name":"机皇","n":19},{"name":"炎王","n":19},{"name":"幻兽机","n":19},{"name":"龙星","n":19},{"name":"芳香","n":19},{"name":"超级量子","n":19},{"name":"真龙","n":19},{"name":"半龙女仆","n":19},{"name":"魔救","n":19},{"name":"七音服","n":19},{"name":"御巫","n":19},{"name":"魔导书","n":18},{"name":"扰乱","n":18},{"name":"炼狱","n":18},{"name":"灵使","n":18},{"name":"共鸣者","n":18},{"name":"罪","n":18},{"name":"超级运动员","n":18},{"name":"妖仙兽","n":18},{"name":"神数","n":18},{"name":"威风妖怪","n":18},{"name":"地中族","n":18},{"name":"魔界剧团","n":18},{"name":"自奏圣乐","n":18},{"name":"咒眼","n":18},{"name":"梦魔镜","n":18},{"name":"王战","n":18},{"name":"北极天熊","n":18},{"name":"莫忘","n":18},{"name":"神艺","n":18},{"name":"奈芙提斯","n":17},{"name":"火山","n":17},{"name":"幻魔","n":17},{"name":"古遗物","n":17},{"name":"机壳","n":17},{"name":"花札卫","n":17},{"name":"未界域","n":17},{"name":"天威","n":17},{"name":"相剑","n":17},{"name":"朋克","n":17},{"name":"救祓少女","n":17},{"name":"救援ACE队","n":17},{"name":"罪宝","n":17},{"name":"白森林","n":17},{"name":"千年","n":16},{"name":"光波","n":16},{"name":"忍法","n":16},{"name":"秘仪之力","n":16},{"name":"恩底弥翁","n":16},{"name":"虫惑魔","n":16},{"name":"娱乐法师","n":16},{"name":"秘旋谍","n":16},{"name":"电脑网","n":16},{"name":"弹丸","n":16},{"name":"魔弹","n":16},{"name":"天气","n":16},{"name":"恐龙摔跤手","n":16},{"name":"斩机","n":16},{"name":"海造贼","n":16},{"name":"电脑堺","n":16},{"name":"护宝炮妖","n":16},{"name":"溟界","n":16},{"name":"群豪","n":16},{"name":"纯爱妖精","n":16},{"name":"黄金荣耀","n":16},{"name":"异响鸣","n":16},{"name":"零件","n":15},{"name":"斯摩夫","n":15},{"name":"电子暗黑","n":15},{"name":"侵入魔鬼","n":15},{"name":"希望皇 霍普","n":15},{"name":"圣剑","n":15},{"name":"毛绒动物","n":15},{"name":"十二兽","n":15},{"name":"圣像骑士","n":15},{"name":"调皮宝贝","n":15},{"name":"“艾”","n":15},{"name":"秘异三变","n":15},{"name":"战吼","n":15},{"name":"魔键","n":15},{"name":"骑甲虫","n":15},{"name":"书灵师","n":15},{"name":"拉比林斯迷宫","n":15},{"name":"神碑","n":15},{"name":"珠泪哀歌族","n":15},{"name":"魊影","n":15},{"name":"征服斗魂","n":15},{"name":"提斯蒂娜","n":15},{"name":"迷拟宝箱鬼","n":15},{"name":"终刻","n":15},{"name":"耀圣","n":15},{"name":"雷龙","n":14},{"name":"纳祭","n":14},{"name":"凭依装着","n":14},{"name":"蛇毒","n":14},{"name":"海皇","n":14},{"name":"异热同心武器","n":14},{"name":"源数","n":14},{"name":"狱火机","n":14},{"name":"点火骑士","n":14},{"name":"召唤兽","n":14},{"name":"抒情歌鸲","n":14},{"name":"码语者","n":14},{"name":"闪刀姬","n":14},{"name":"时间潜行者","n":14},{"name":"蜂军","n":14},{"name":"巨石遗物","n":14},{"name":"冰水","n":14},{"name":"恐吓爪牙族","n":14},{"name":"俱舍怒威族","n":14},{"name":"百夫长骑士","n":14},{"name":"哥布林骑手","n":14},{"name":"巳剑","n":14},{"name":"星辰","n":14},{"name":"味美喵","n":14},{"name":"K9","n":14},{"name":"反叛曲机器人","n":14},{"name":"不可见之手","n":14},{"name":"纠罪巧","n":14},{"name":"杀手级调整曲","n":14},{"name":"道化一座","n":14},{"name":"具象天使","n":14},{"name":"磁石战士","n":13},{"name":"电子龙","n":13},{"name":"云魔物","n":13},{"name":"假面英雄","n":13},{"name":"隆隆隆","n":13},{"name":"征龙","n":13},{"name":"PSY骨架","n":13},{"name":"雾动机龙","n":13},{"name":"机界骑士","n":13},{"name":"女武神","n":13},{"name":"无限起动","n":13},{"name":"三幻魔","n":13},{"name":"机块","n":13},{"name":"恐啡肽狂龙","n":13},{"name":"蛇眼","n":13},{"name":"斯芬克斯","n":12},{"name":"紫炎","n":12},{"name":"化石","n":12},{"name":"霞之谷","n":12},{"name":"齿轮齿轮","n":12},{"name":"时械神","n":12},{"name":"英豪挑战者","n":12},{"name":"炎舞","n":12},{"name":"玄化","n":12},{"name":"坏兽","n":12},{"name":"妖精传姬","n":12},{"name":"星杯","n":12},{"name":"机怪虫","n":12},{"name":"焰圣骑士","n":12},{"name":"双天","n":12},{"name":"卫星闪灵","n":12},{"name":"灰灭","n":12},{"name":"蕾祸","n":12},{"name":"刻魔","n":12},{"name":"蓟花","n":12},{"name":"雷火沸动","n":12},{"name":"码丽丝","n":12},{"name":"龙华","n":12},{"name":"绚岚","n":12},{"name":"基因组混合","n":12},{"name":"艮神鬼","n":12},{"name":"洞","n":11},{"name":"代行者","n":11},{"name":"荷鲁斯","n":11},{"name":"青蛙","n":11},{"name":"爆裂体","n":11},{"name":"地缚神","n":11},{"name":"真次世代","n":11},{"name":"怒怒怒","n":11},{"name":"纹章","n":11},{"name":"混沌超量","n":11},{"name":"文具电子人","n":11},{"name":"超重武者装留","n":11},{"name":"契约书","n":11},{"name":"伯吉斯异兽","n":11},{"name":"破坏剑","n":11},{"name":"军贯","n":11},{"name":"随风旅鸟","n":11},{"name":"兽带斗神","n":11},{"name":"迪亚贝尔","n":11},{"name":"再世","n":11},{"name":"塞尼特","n":11},{"name":"盈彩月夜","n":11},{"name":"异解△","n":11},{"name":"混沌战士","n":10},{"name":"泰达路斯","n":10},{"name":"电池人","n":10},{"name":"红莲魔","n":10},{"name":"命运女郎","n":10},{"name":"幻影英雄","n":10},{"name":"进化虫","n":10},{"name":"阳炎","n":10},{"name":"纹章兽","n":10},{"name":"尘妖","n":10},{"name":"时空","n":10},{"name":"阴影","n":10},{"name":"龙剑士","n":10},{"name":"灰篮","n":10},{"name":"无形噬体","n":10},{"name":"地中族邪界","n":10},{"name":"廷达魔三角","n":10},{"name":"圣夜骑士","n":10},{"name":"原质炉","n":10},{"name":"死狱乡","n":10},{"name":"春化精","n":10},{"name":"末那愚子族","n":10},{"name":"新式魔厨","n":10},{"name":"肃声","n":10},{"name":"雷盟","n":10},{"name":"暗黑骑士 盖亚","n":9},{"name":"巨大战舰","n":9},{"name":"蔷薇龙","n":9},{"name":"音响战士","n":9},{"name":"三形金字塔","n":9},{"name":"风魔女","n":9},{"name":"防火","n":9},{"name":"幻崩","n":9},{"name":"破械神","n":9},{"name":"哈特","n":9},{"name":"妮穆蕾莉娅","n":9},{"name":"原石","n":9},{"name":"艾克佐迪亚","n":8},{"name":"黑魔术","n":8},{"name":"人造人","n":8},{"name":"珀耳修斯","n":8},{"name":"侵略的","n":8},{"name":"电子科技","n":8},{"name":"新空间侠","n":8},{"name":"宝玉兽","n":8},{"name":"进化龙","n":8},{"name":"阳炎兽","n":8},{"name":"异晶人的","n":8},{"name":"编号系","n":8},{"name":"七皇","n":8},{"name":"叛逆","n":8},{"name":"幻透翼","n":8},{"name":"占术姬","n":8},{"name":"魔神仪","n":8},{"name":"直播☆双子","n":8},{"name":"邪恶★双子","n":8},{"name":"惊乐","n":8},{"name":"深渊之兽","n":8},{"name":"阿尔戈☆群星","n":8},{"name":"无垢大艺术","n":8},{"name":"野蛮人","n":7},{"name":"金属化","n":7},{"name":"迅捷","n":7},{"name":"黑蝎","n":7},{"name":"翼侠","n":7},{"name":"魔导兽","n":7},{"name":"磁力","n":7},{"name":"反击","n":7},{"name":"极星宝","n":7},{"name":"森之圣兽","n":7},{"name":"灵神","n":7},{"name":"英豪冠军","n":7},{"name":"光天使","n":7},{"name":"灵摆龙","n":7},{"name":"锋利小鬼","n":7},{"name":"灵兽使","n":7},{"name":"圣灵兽骑","n":7},{"name":"强袭黑羽","n":7},{"name":"魔界台本","n":7},{"name":"幻煌龙","n":7},{"name":"元素灵剑士","n":7},{"name":"星义","n":7},{"name":"黄金乡","n":7},{"name":"圣蔓","n":7},{"name":"圣天树","n":7},{"name":"游乐设施","n":7},{"name":"高等宝玉兽","n":7},{"name":"G石人","n":7},{"name":"门之守护神","n":6},{"name":"食谱","n":6},{"name":"树熊","n":6},{"name":"茧状体","n":6},{"name":"电子化天使","n":6},{"name":"竹光","n":6},{"name":"于贝尔","n":6},{"name":"禁忌的","n":6},{"name":"电子鱼人","n":6},{"name":"救世","n":6},{"name":"变化","n":6},{"name":"仪水镜","n":6},{"name":"炎王兽","n":6},{"name":"魔装战士","n":6},{"name":"星辉士","n":6},{"name":"超量龙","n":6},{"name":"精灵兽","n":6},{"name":"同调龙","n":6},{"name":"超级量子战士","n":6},{"name":"魔术少女","n":6},{"name":"化合兽","n":6},{"name":"霸王眷龙","n":6},{"name":"影六武众","n":6},{"name":"占卜魔女","n":6},{"name":"至爱","n":6},{"name":"璃拉","n":6},{"name":"灿幻","n":6},{"name":"预幻","n":6},{"name":"被封印","n":5},{"name":"利维坦","n":5},{"name":"王家长眠之谷","n":5},{"name":"沉默剑士","n":5},{"name":"沉默魔术师","n":5},{"name":"羽翼栗子球","n":5},{"name":"机械天使","n":5},{"name":"魅惑的女王","n":5},{"name":"烈焰加农炮","n":5},{"name":"加特姆士","n":5},{"name":"链","n":5},{"name":"反应机","n":5},{"name":"机皇帝","n":5},{"name":"极星兽","n":5},{"name":"极星灵","n":5},{"name":"机皇兵","n":5},{"name":"刷拉拉","n":5},{"name":"保镖","n":5},{"name":"异热同心从者","n":5},{"name":"PSY骨架装备","n":5},{"name":"笑容","n":5},{"name":"凶饿毒","n":5},{"name":"融合龙","n":5},{"name":"秘旋谍装备","n":5},{"name":"拓扑","n":5},{"name":"白斗气","n":5},{"name":"姬丝基勒","n":5},{"name":"统王","n":5},{"name":"飞龙炎","n":4},{"name":"黑魔术少女","n":4},{"name":"破坏之剑士","n":4},{"name":"阿匹卜","n":4},{"name":"死之信息","n":4},{"name":"进化药","n":4},{"name":"悠悠","n":4},{"name":"甘多拉","n":4},{"name":"结合术","n":4},{"name":"交通机人","n":4},{"name":"究极宝玉神","n":4},{"name":"铳士","n":4},{"name":"瞬间移动","n":4},{"name":"极星天","n":4},{"name":"六武式","n":4},{"name":"机皇神","n":4},{"name":"进化帝","n":4},{"name":"假面魔蹈士","n":4},{"name":"幻奏的音姬","n":4},{"name":"未来皇 霍普","n":4},{"name":"死伟王","n":4},{"name":"龙魔王","n":4},{"name":"超级量子机兽","n":4},{"name":"恶魔娘","n":4},{"name":"黄金国永生药","n":4},{"name":"焰圣剑","n":4},{"name":"源数之门","n":4},{"name":"魔瞳","n":4},{"name":"铠装超量","n":4},{"name":"天杯龙","n":4},{"name":"精灵剑士","n":3},{"name":"眼纳祭神","n":3},{"name":"塞勒凯特","n":3},{"name":"荷鲁斯之黑炎龙","n":3},{"name":"玩具","n":3},{"name":"白夜","n":3},{"name":"巴巴罗斯","n":3},{"name":"动力工具","n":3},{"name":"波波","n":3},{"name":"许珀里翁","n":3},{"name":"极神","n":3},{"name":"齿轮齿轮人","n":3},{"name":"幻蝶刺客","n":3},{"name":"鲨龙兽","n":3},{"name":"阿托利斯","n":3},{"name":"传说之龙","n":3},{"name":"兰斯洛特","n":3},{"name":"超级防卫机器人","n":3},{"name":"食恶","n":3},{"name":"燃烧拳","n":3},{"name":"拟声","n":3},{"name":"传说的骑士","n":3},{"name":"隐藏的机壳","n":3},{"name":"水伶女","n":3},{"name":"水族馆","n":3},{"name":"艾格佐德","n":3},{"name":"秘旋谍任务","n":3},{"name":"阿莱斯特","n":3},{"name":"灵摆读阵","n":3},{"name":"霸王门","n":3},{"name":"桥梁","n":3},{"name":"代码破坏者","n":3},{"name":"艾克莉西娅","n":3},{"name":"电脑堺门","n":3},{"name":"圣种","n":3},{"name":"维萨斯","n":3},{"name":"拉比林斯迷宫欢迎","n":3},{"name":"迪亚贝尔斯塔尔","n":3},{"name":"欢聚友伴","n":3},{"name":"迷宫壁","n":2},{"name":"法理守护者","n":2},{"name":"摩天楼","n":2},{"name":"世界末日","n":2},{"name":"番茄小子","n":2},{"name":"喷水引擎","n":2},{"name":"银河眼时空龙","n":2},{"name":"外神","n":2},{"name":"幼芽","n":2},{"name":"以太神兵龙","n":2},{"name":"旧神","n":2},{"name":"No.99","n":2},{"name":"但丁","n":2},{"name":"古神","n":2},{"name":"妖刀-不知火","n":2},{"name":"守护神官","n":2},{"name":"光波龙","n":2},{"name":"潜海","n":2},{"name":"罗兰","n":2},{"name":"黄金国巫妖","n":2},{"name":"人偶怪兽","n":2},{"name":"原数天灵","n":2},{"name":"大钢琴之七音服","n":2},{"name":"隐形水母怪","n":2},{"name":"蓝泪","n":2},{"name":"涂鸦兽","n":2},{"name":"吠陀","n":2},{"name":"徽记","n":2},{"name":"石版","n":2},{"name":"米底乌斯","n":2},{"name":"底亚克托罗斯","n":2},{"name":"磁石战士Σ","n":2},{"name":"暗黑调整","n":2}];
+
+/* ---------- 工具 ---------- */
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => t.classList.remove('show'), 1800);
+}
+function copyText(text, okMsg) {
+  const done = () => toast(okMsg);
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(done, () => fallbackCopy(text, done));
+  } else fallbackCopy(text, done);
+}
+function fallbackCopy(text, done) {
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.position = 'fixed'; ta.style.opacity = '0';
+  document.body.appendChild(ta);
+  ta.select();
+  try { document.execCommand('copy'); done(); }
+  catch (e) { toast('复制失败，请手动复制'); }
+  document.body.removeChild(ta);
+}
+
+/* ---------- 可复现随机数 ---------- */
+function xmur3(str) {
+  let h = 1779033703 ^ str.length;
+  for (let i = 0; i < str.length; i++) {
+    h = Math.imul(h ^ str.charCodeAt(i), 3432918353);
+    h = (h << 13) | (h >>> 19);
+  }
+  return function () {
+    h = Math.imul(h ^ (h >>> 16), 2246822507);
+    h = Math.imul(h ^ (h >>> 13), 3266489909);
+    return (h ^= h >>> 16) >>> 0;
+  };
+}
+function mulberry32(a) {
+  return function () {
+    a |= 0; a = (a + 0x6D2B79F5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+function rngFor(room, step) { return mulberry32(xmur3(room + '::' + step)()); }
+
+/* ---------- 状态 ---------- */
+let current = null;   // { fields:[], room, step }
+let redrawsUsed = 0;
+
+/* ---------- 屏蔽列表 ---------- */
+const BL_KEY = 'ygo-field-blocklist';
+let blocklist = new Set();
+function loadBlocklist() {
+  try {
+    const arr = JSON.parse(localStorage.getItem(BL_KEY) || '[]');
+    if (Array.isArray(arr)) arr.forEach(n => blocklist.add(n));
+  } catch (e) {}
+}
+function saveBlocklist() {
+  try { localStorage.setItem(BL_KEY, JSON.stringify([...blocklist])); } catch (e) {}
+}
+function addBlock(names) {
+  let added = 0;
+  names.forEach(n => {
+    const v = n.trim();
+    if (v && FIELDS.some(f => f.name === v) && !blocklist.has(v)) { blocklist.add(v); added++; }
+  });
+  if (added) { saveBlocklist(); renderBlocklist(); }
+  return added;
+}
+function updateBlockBtn() {
+  document.getElementById('btn-block').textContent = '🚫 屏蔽列表（' + blocklist.size + '）';
+}
+function renderBlocklist() {
+  updateBlockBtn();
+  const box = document.getElementById('block-list');
+  box.innerHTML = '';
+  if (blocklist.size === 0) {
+    box.innerHTML = '<span class="empty">（空）—— 抽到太强的字段时，悬停卡片点 ✕ 即可屏蔽</span>';
+    return;
+  }
+  [...blocklist].sort().forEach(name => {
+    const chip = document.createElement('span');
+    chip.className = 'block-chip';
+    const t = document.createElement('span');
+    t.textContent = name;
+    const del = document.createElement('button');
+    del.textContent = '✕';
+    del.title = '取消屏蔽 ' + name;
+    del.addEventListener('click', () => {
+      blocklist.delete(name);
+      saveBlocklist();
+      renderBlocklist();
+    });
+    chip.appendChild(t);
+    chip.appendChild(del);
+    box.appendChild(chip);
+  });
+}
+function parseBlockText(text) {
+  return text.split(/[、,，;；\n\r]+/).map(s => s.trim()).filter(Boolean);
+}
+
+/* ---------- 抽取 ---------- */
+function getSettings() {
+  return {
+    count: Math.min(8, Math.max(1, parseInt(document.getElementById('count').value, 10) || 3)),
+    min: parseInt(document.getElementById('min').value, 10) || 0,
+    redrawLimit: parseInt(document.getElementById('redraw').value, 10) || 0,
+  };
+}
+function saveSettings() {
+  try { localStorage.setItem('ygo-field-drawer', JSON.stringify(getSettings())); } catch (e) {}
+}
+function loadSettings() {
+  try {
+    const s = JSON.parse(localStorage.getItem('ygo-field-drawer') || 'null');
+    if (!s) return;
+    if (s.count) document.getElementById('count').value = s.count;
+    if (s.min !== undefined) document.getElementById('min').value = s.min;
+    if (s.redrawLimit !== undefined) document.getElementById('redraw').value = s.redrawLimit;
+  } catch (e) {}
+}
+function poolFor(min) { return FIELDS.filter(f => f.n >= min && !blocklist.has(f.name)); }
+
+function doDraw(step) {
+  const s = getSettings();
+  saveSettings();
+  const pool = poolFor(s.min);
+  if (pool.length === 0) { toast('当前下限下没有可用字段，请调低下限'); return false; }
+  if (pool.length < s.count) {
+    toast('池子里只剩 ' + pool.length + ' 个字段，就抽这么多啦');
+  }
+  const n = Math.min(s.count, pool.length);
+  let room = document.getElementById('room').value.trim();
+  if (!room) {
+    // 独立随机：每次生成一个一次性种子
+    room = 'solo-' + Math.random().toString(36).slice(2, 10);
+    current = { solo: true, room: '' };
+  } else {
+    current = { solo: false, room: room };
+  }
+  const rng = rngFor(current.solo ? room : (current.room + '::' + step), step);
+  // Fisher-Yates 洗牌取前 n 个
+  const idx = pool.map((_, i) => i);
+  for (let i = idx.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    [idx[i], idx[j]] = [idx[j], idx[i]];
+  }
+  current.fields = idx.slice(0, n).map(i => pool[i]);
+  current.step = step;
+  return true;
+}
+
+function render() {
+  const box = document.getElementById('cards');
+  box.innerHTML = '';
+  current.fields.forEach((f, i) => {
+    const el = document.createElement('div');
+    el.className = 'card';
+    el.style.animationDelay = (i * 0.12) + 's';
+    el.innerHTML =
+      '<span class="num">#' + (i + 1) + '</span>' +
+      '<span class="name">' + escapeHtml(f.name) + '</span>' +
+      '<span class="count">' + f.n + ' 张卡</span>' +
+      '<button class="kill" title="屏蔽「' + escapeHtml(f.name) + '」（太强了！）">✕</button>';
+    el.querySelector('.kill').addEventListener('click', () => {
+      blocklist.add(f.name);
+      saveBlocklist();
+      renderBlocklist();
+      toast('已屏蔽「' + f.name + '」，下次抽取起生效，点重抽立换');
+    });
+    box.appendChild(el);
+  });
+  document.getElementById('result').style.display = 'block';
+  updateRedrawUI();
+}
+
+function updateRedrawUI() {
+  const s = getSettings();
+  const btn = document.getElementById('btn-redraw');
+  const info = document.getElementById('redraw-info');
+  if (s.redrawLimit > 0) {
+    const left = Math.max(0, s.redrawLimit - redrawsUsed);
+    btn.disabled = left === 0;
+    info.textContent = current.solo
+      ? '重抽剩余 ' + left + ' 次'
+      : '重抽剩余 ' + left + ' 次 · 第 ' + (current.step + 1) + ' 轮（同房间号+同轮数=同结果）';
+  } else {
+    btn.disabled = false;
+    info.textContent = current.solo
+      ? '重抽不限次数'
+      : '重抽不限次数 · 第 ' + (current.step + 1) + ' 轮（同房间号+同轮数=同结果）';
+  }
+}
+
+function escapeHtml(s) {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+/* ---------- 事件 ---------- */
+document.getElementById('btn-draw').addEventListener('click', () => {
+  redrawsUsed = 0;
+  if (doDraw(0)) render();
+});
+document.getElementById('btn-redraw').addEventListener('click', () => {
+  const s = getSettings();
+  if (s.redrawLimit > 0 && redrawsUsed >= s.redrawLimit) return;
+  redrawsUsed++;
+  if (doDraw(current.solo ? 0 : current.step + 1)) render();
+});
+document.getElementById('btn-room').addEventListener('click', () => {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let code = '';
+  for (let i = 0; i < 6; i++) code += chars[Math.floor(Math.random() * chars.length)];
+  document.getElementById('room').value = code;
+});
+document.getElementById('btn-room-copy').addEventListener('click', () => {
+  const v = document.getElementById('room').value.trim();
+  if (!v) { toast('先点「生成」或手动输入房间号'); return; }
+  copyText(v, '房间号已复制：' + v);
+});
+document.getElementById('btn-copy').addEventListener('click', () => {
+  if (!current || !current.fields) { toast('还没有抽过'); return; }
+  const s = getSettings();
+  const list = current.fields.map(f => f.name + '(' + f.n + ')').join(' / ');
+  const room = current.solo ? '独立随机' : ('房间号 ' + current.room);
+  const round = current.solo ? '' : ' · 第 ' + (current.step + 1) + ' 轮';
+  const text = '【游戏王抽字段】' + room + round + ' | 抽' + current.fields.length + '：' + list +
+    ' | 卡数下限 ' + (s.min === 0 ? '不限' : '≥' + s.min);
+  copyText(text, '战报已复制');
+});
+document.getElementById('btn-block').addEventListener('click', () => {
+  const p = document.getElementById('block-panel');
+  p.style.display = p.style.display === 'none' ? 'block' : 'none';
+  renderBlocklist();
+});
+document.getElementById('block-add').addEventListener('keydown', (e) => {
+  if (e.key !== 'Enter') return;
+  const v = e.target.value.trim();
+  if (!v) return;
+  const names = parseBlockText(v);
+  const added = addBlock(names);
+  if (added === 0) {
+    const ok = names.every(n => FIELDS.some(f => f.name === n));
+    toast(ok ? '这些字段已在屏蔽列表中' : '没有匹配到字段名（需与卡片上显示的名称完全一致）');
+  } else {
+    toast('已屏蔽 ' + added + ' 个字段');
+  }
+  e.target.value = '';
+});
+document.getElementById('btn-block-copy').addEventListener('click', () => {
+  if (blocklist.size === 0) { toast('屏蔽列表为空'); return; }
+  copyText([...blocklist].sort().join('、'), '屏蔽表已复制，发给朋友点「粘贴导入」即可同步');
+});
+document.getElementById('btn-block-paste').addEventListener('click', () => {
+  const doImport = (text) => {
+    const added = addBlock(parseBlockText(text));
+    toast(added ? '导入并屏蔽 ' + added + ' 个字段' : '剪贴板里没有可识别的字段名');
+  };
+  if (navigator.clipboard && navigator.clipboard.readText) {
+    navigator.clipboard.readText().then(doImport, () => toast('无法读取剪贴板，请粘贴到上方输入框后回车'));
+  } else {
+    toast('浏览器不支持读剪贴板，请粘贴到上方输入框后回车');
+  }
+});
+document.getElementById('btn-block-clear').addEventListener('click', () => {
+  if (blocklist.size === 0) return;
+  if (confirm('确定清空全部 ' + blocklist.size + ' 个屏蔽字段？')) {
+    blocklist.clear();
+    saveBlocklist();
+    renderBlocklist();
+  }
+});
+
+loadSettings();
+loadBlocklist();
+updateBlockBtn();
+</script>
+</body>
+</html>
